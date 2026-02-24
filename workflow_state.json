@@ -3,6 +3,10 @@
     "id": "699da8a84d9b8b973a73e428",
     "name": "Market Analysis Coordinator"
   },
+  "email_sender_agent": {
+    "id": "699daf73b09910f46dc2581a",
+    "name": "Report Email Sender"
+  },
   "sub_agents": [
     {
       "id": "699da87825bfd8a7382bdffe",

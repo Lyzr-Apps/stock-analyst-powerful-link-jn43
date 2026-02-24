@@ -21,6 +21,7 @@ import { FiTrendingUp, FiTrendingDown, FiRefreshCw, FiSettings, FiClock, FiMail,
 // ---------------------------------------------------------------------------
 
 const MANAGER_AGENT_ID = '699da8a84d9b8b973a73e428'
+const EMAIL_SENDER_AGENT_ID = '699daf73b09910f46dc2581a'
 const INITIAL_SCHEDULE_ID = '699da8ae399dfadeac390fb8'
 
 const ALL_SECTORS = [
@@ -629,13 +630,13 @@ export default function Page() {
     setEmailReportMsg('')
     setToolAuthRequired(null)
 
-    const tickers = watchlist.length > 0 ? watchlist.join(', ') : 'AAPL, MSFT, GOOGL, AMZN, NVDA'
-    const sectors = selectedSectors.length > 0 ? selectedSectors.join(', ') : 'Technology, Healthcare, Financials'
+    const reportContent = currentReport.full_report || currentReport.executive_summary || 'Daily Market Analysis Report'
+    const reportDate = currentReport.report_date || new Date().toLocaleDateString()
 
-    const message = `Send the following market analysis report via Gmail to ${deliveryEmail}. The report covers watchlist stocks: ${tickers}, and sectors: ${sectors}. Here is the full report content to email:\n\n${currentReport.full_report || currentReport.executive_summary || 'Daily Market Analysis Report'}\n\nSubject should be: StockPulse Daily Market Report - ${currentReport.report_date || new Date().toLocaleDateString()}`
+    const message = `Send this market analysis report via Gmail to ${deliveryEmail}.\n\nSubject: StockPulse Daily Market Report - ${reportDate}\n\nBody:\n${reportContent}`
 
     try {
-      const result = await callAIAgent(message, MANAGER_AGENT_ID)
+      const result = await callAIAgent(message, EMAIL_SENDER_AGENT_ID)
 
       if (result && !result.success) {
         const errStr = JSON.stringify(result).toLowerCase()

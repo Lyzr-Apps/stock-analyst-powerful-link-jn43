@@ -1,0 +1,20 @@
+{
+  "agent_name": "Report Email Sender",
+  "agent_id": "699daf73b09910f46dc2581a",
+  "description": "Sends the completed market analysis report to a specified email address via Gmail.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "status": "string",
+    "recipient": "string",
+    "subject": "string",
+    "message": "string"
+  },
+  "example_response": {
+    "status": "sample string",
+    "recipient": "sample string",
+    "subject": "sample string",
+    "message": "sample string"
+  }
+}
