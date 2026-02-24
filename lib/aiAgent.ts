@@ -209,6 +209,20 @@ export async function uploadFiles(files: File | File[]): Promise<UploadResponse>
       body: formData,
     })
 
+    if (!response) {
+      return {
+        success: false,
+        asset_ids: [],
+        files: [],
+        total_files: fileArray.length,
+        successful_uploads: 0,
+        failed_uploads: fileArray.length,
+        message: 'Network error during upload',
+        timestamp: new Date().toISOString(),
+        error: 'No response from server',
+      }
+    }
+
     const data = await response.json()
     return data
   } catch (error) {

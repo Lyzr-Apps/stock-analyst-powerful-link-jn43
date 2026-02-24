@@ -545,7 +545,11 @@ export default function Page() {
   }, [scheduleId])
 
   useEffect(() => {
-    loadScheduleData()
+    // Delay initial schedule load to avoid race condition during app startup
+    const timer = setTimeout(() => {
+      loadScheduleData()
+    }, 500)
+    return () => clearTimeout(timer)
   }, [loadScheduleData])
 
   // ---------------------------------------------------------------------------
