@@ -56,7 +56,7 @@ const SAMPLE_REPORT: ParsedReport = {
     { action: 'HOLD', ticker: 'AAPL', reasoning: 'Trading near all-time highs. Earnings report next week could be a catalyst. Wait for results before adding.' },
     { action: 'SELL', ticker: 'XLU', reasoning: 'Utilities sector facing headwinds from rising rates. Rotate into cyclical exposure for better risk-adjusted returns.' }
   ],
-  email_sent: 'Report delivered successfully via Gmail',
+  email_sent: '',
   full_report: '# Comprehensive Daily Market Report\n\n## Executive Overview\n\nMarkets showed mixed signals today with cautiously bullish sentiment prevailing.\n\n## Portfolio Analysis\n\nYour watchlist gained +0.45% today, outperforming the S&P 500 benchmark of +0.21%.\n\n## S&P 500 Analysis\n\nThe index closed at 5,842.50, up 12 points. Breadth was positive.\n\n## Technology Sector\n\nTech pulled back slightly with semiconductors leading the decline. AI names were mixed.\n\n## Sector Rotation\n\n- **Best:** Financials (+1.8%)\n- **Worst:** Utilities (-0.9%)\n\n## Recommendations\n\n1. **BUY JPM** - Strong earnings, benefiting from rate environment\n2. **HOLD AAPL** - Wait for earnings next week\n3. **SELL XLU** - Rotate out of defensive positioning'
 }
 
@@ -258,7 +258,7 @@ function LoadingSkeleton() {
   )
 }
 
-function ReportView({ report }: { report: ParsedReport }) {
+function ReportView({ report, onEmailReport, emailing, emailReportMsg }: { report: ParsedReport; onEmailReport?: () => void; emailing?: boolean; emailReportMsg?: string }) {
   const insights = Array.isArray(report?.top_insights) ? report.top_insights : []
   const recommendations = Array.isArray(report?.recommendations) ? report.recommendations : []
 
@@ -358,7 +358,33 @@ function ReportView({ report }: { report: ParsedReport }) {
         </ExpandableSection>
       )}
 
-      {/* Email Status */}
+      {/* Email Action */}
+      {onEmailReport && (
+        <div className="border-t border-border pt-5 mt-6 space-y-3">
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={onEmailReport}
+              disabled={emailing}
+              variant="outline"
+              className="rounded-none tracking-[0.15em] uppercase text-xs border-border"
+            >
+              {emailing ? (
+                <span className="flex items-center gap-2"><FiRefreshCw className="animate-spin" size={12} /> Sending...</span>
+              ) : (
+                <span className="flex items-center gap-2"><FiMail size={14} /> Email This Report</span>
+              )}
+            </Button>
+          </div>
+          {emailReportMsg && (
+            <div className={`flex items-center gap-2 text-xs ${emailReportMsg.includes('sent to') ? 'text-primary' : 'text-destructive'}`}>
+              {emailReportMsg.includes('sent to') ? <FiCheck size={12} /> : <FiAlertCircle size={12} />}
+              <span className="tracking-wider">{emailReportMsg}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Email Status (from agent response) */}
       {report?.email_sent && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground border-t border-border pt-4 mt-4">
           <FiMail size={14} />
@@ -387,6 +413,8 @@ export default function Page() {
   const [successMsg, setSuccessMsg] = useState('')
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null)
   const [toolAuthRequired, setToolAuthRequired] = useState<{ tool_name: string; reason: string } | null>(null)
+  const [emailing, setEmailing] = useState(false)
+  const [emailReportMsg, setEmailReportMsg] = useState('')
 
   // Reports history
   const [storedReports, setStoredReports] = useState<StoredReport[]>([])
@@ -529,30 +557,16 @@ export default function Page() {
     setErrorMsg('')
     setSuccessMsg('')
     setToolAuthRequired(null)
+    setEmailReportMsg('')
     setActiveAgentId(MANAGER_AGENT_ID)
 
     const tickers = watchlist.length > 0 ? watchlist.join(', ') : 'AAPL, MSFT, GOOGL, AMZN, NVDA'
     const sectors = selectedSectors.length > 0 ? selectedSectors.join(', ') : 'Technology, Healthcare, Financials'
-    const emailPart = emailSaved && deliveryEmail ? ` Send the report via Gmail to ${deliveryEmail}.` : ''
 
-    const message = `Generate the comprehensive daily market analysis report. Analyze the following watchlist stocks: ${tickers}. Focus on these sectors: ${sectors}.${emailPart}`
+    const message = `Generate the comprehensive daily market analysis report. Analyze the following watchlist stocks: ${tickers}. Focus on these sectors: ${sectors}. Do NOT send any email. Just generate and return the analysis report.`
 
     try {
       const result = await callAIAgent(message, MANAGER_AGENT_ID)
-
-      // Check for tool auth error in the result
-      if (result && !result.success) {
-        const errStr = JSON.stringify(result).toLowerCase()
-        if (errStr.includes('tool_auth') || errStr.includes('tool authentication') || errStr.includes('no credentials found') || errStr.includes('connect an account')) {
-          setToolAuthRequired({
-            tool_name: 'Gmail',
-            reason: 'The Gmail integration needs to be connected before the agent can send email reports. Please connect your Gmail account through the Lyzr Studio connection wizard that should appear, then try again.'
-          })
-          setLoading(false)
-          setActiveAgentId(null)
-          return
-        }
-      }
 
       if (result && result.success) {
         const rawResult = result?.response?.result || {}
@@ -591,6 +605,55 @@ export default function Page() {
 
     setLoading(false)
     setActiveAgentId(null)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Email report on demand
+  // ---------------------------------------------------------------------------
+
+  const emailReport = async () => {
+    if (!deliveryEmail || !deliveryEmail.includes('@')) {
+      setEmailReportMsg('Please configure a delivery email in Settings first.')
+      return
+    }
+    if (!currentReport) {
+      setEmailReportMsg('No report to send. Generate a report first.')
+      return
+    }
+
+    setEmailing(true)
+    setEmailReportMsg('')
+    setToolAuthRequired(null)
+
+    const tickers = watchlist.length > 0 ? watchlist.join(', ') : 'AAPL, MSFT, GOOGL, AMZN, NVDA'
+    const sectors = selectedSectors.length > 0 ? selectedSectors.join(', ') : 'Technology, Healthcare, Financials'
+
+    const message = `Send the following market analysis report via Gmail to ${deliveryEmail}. The report covers watchlist stocks: ${tickers}, and sectors: ${sectors}. Here is the full report content to email:\n\n${currentReport.full_report || currentReport.executive_summary || 'Daily Market Analysis Report'}\n\nSubject should be: StockPulse Daily Market Report - ${currentReport.report_date || new Date().toLocaleDateString()}`
+
+    try {
+      const result = await callAIAgent(message, MANAGER_AGENT_ID)
+
+      if (result && !result.success) {
+        const errStr = JSON.stringify(result).toLowerCase()
+        if (errStr.includes('tool_auth') || errStr.includes('tool authentication') || errStr.includes('no credentials found') || errStr.includes('connect an account')) {
+          setToolAuthRequired({
+            tool_name: 'Gmail',
+            reason: 'The Gmail integration needs to be connected before sending email reports. Please connect your Gmail account through the connection wizard that should appear, then try again.'
+          })
+          setEmailing(false)
+          return
+        }
+        setEmailReportMsg(result?.error || 'Failed to send email. Please try again.')
+      } else if (result && result.success) {
+        setEmailReportMsg(`Report sent to ${deliveryEmail}`)
+      } else {
+        setEmailReportMsg('Failed to send email. Please try again.')
+      }
+    } catch (err) {
+      setEmailReportMsg(err instanceof Error ? err.message : 'Network error while sending email.')
+    }
+
+    setEmailing(false)
   }
 
   // ---------------------------------------------------------------------------
@@ -824,12 +887,12 @@ export default function Page() {
                     <Button
                       onClick={() => {
                         setToolAuthRequired(null)
-                        generateReport()
+                        emailReport()
                       }}
                       variant="outline"
                       className="rounded-none text-xs tracking-wider uppercase border-amber-300 text-amber-800 hover:bg-amber-100"
                     >
-                      <FiRefreshCw size={12} className="mr-1.5" /> Try Again
+                      <FiRefreshCw size={12} className="mr-1.5" /> Try Sending Again
                     </Button>
                     <Button
                       onClick={() => setToolAuthRequired(null)}
@@ -859,7 +922,12 @@ export default function Page() {
 
               {/* Report Content */}
               {!loading && displayReport && (
-                <ReportView report={displayReport} />
+                <ReportView
+                  report={displayReport}
+                  onEmailReport={!showSample ? emailReport : undefined}
+                  emailing={emailing}
+                  emailReportMsg={emailReportMsg}
+                />
               )}
 
               {/* Empty state */}
