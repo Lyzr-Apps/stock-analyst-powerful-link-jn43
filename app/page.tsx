@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { FiTrendingUp, FiTrendingDown, FiRefreshCw, FiSettings, FiClock, FiMail, FiX, FiPlus, FiChevronDown, FiChevronUp, FiActivity, FiBarChart2, FiSearch, FiCheck, FiAlertCircle, FiPlay, FiPause, FiCalendar } from 'react-icons/fi'
+import { FiTrendingUp, FiTrendingDown, FiRefreshCw, FiSettings, FiClock, FiMail, FiX, FiPlus, FiChevronDown, FiChevronUp, FiActivity, FiBarChart2, FiSearch, FiCheck, FiAlertCircle, FiPlay, FiPause, FiCalendar, FiLink } from 'react-icons/fi'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -386,6 +386,7 @@ export default function Page() {
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null)
+  const [toolAuthRequired, setToolAuthRequired] = useState<{ tool_name: string; reason: string } | null>(null)
 
   // Reports history
   const [storedReports, setStoredReports] = useState<StoredReport[]>([])
@@ -527,6 +528,7 @@ export default function Page() {
     setLoading(true)
     setErrorMsg('')
     setSuccessMsg('')
+    setToolAuthRequired(null)
     setActiveAgentId(MANAGER_AGENT_ID)
 
     const tickers = watchlist.length > 0 ? watchlist.join(', ') : 'AAPL, MSFT, GOOGL, AMZN, NVDA'
@@ -537,6 +539,21 @@ export default function Page() {
 
     try {
       const result = await callAIAgent(message, MANAGER_AGENT_ID)
+
+      // Check for tool auth error in the result
+      if (result && !result.success) {
+        const errStr = JSON.stringify(result).toLowerCase()
+        if (errStr.includes('tool_auth') || errStr.includes('tool authentication') || errStr.includes('no credentials found') || errStr.includes('connect an account')) {
+          setToolAuthRequired({
+            tool_name: 'Gmail',
+            reason: 'The Gmail integration needs to be connected before the agent can send email reports. Please connect your Gmail account through the Lyzr Studio connection wizard that should appear, then try again.'
+          })
+          setLoading(false)
+          setActiveAgentId(null)
+          return
+        }
+      }
+
       if (result && result.success) {
         const rawResult = result?.response?.result || {}
         let parsed: ParsedReport
@@ -787,6 +804,43 @@ export default function Page() {
               </div>
 
               {/* Messages */}
+              {toolAuthRequired && (
+                <div className="border border-amber-400/40 bg-amber-50 p-5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <FiLink className="text-amber-600 shrink-0 mt-0.5" size={18} />
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-amber-800 tracking-wide">
+                        {toolAuthRequired.tool_name} Connection Required
+                      </p>
+                      <p className="text-sm text-amber-700 leading-relaxed">
+                        {toolAuthRequired.reason}
+                      </p>
+                      <p className="text-xs text-amber-600 leading-relaxed">
+                        A connection prompt should appear automatically. If it does not, please check your Lyzr Studio account to connect the {toolAuthRequired.tool_name} integration, then return here and try again.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 ml-8">
+                    <Button
+                      onClick={() => {
+                        setToolAuthRequired(null)
+                        generateReport()
+                      }}
+                      variant="outline"
+                      className="rounded-none text-xs tracking-wider uppercase border-amber-300 text-amber-800 hover:bg-amber-100"
+                    >
+                      <FiRefreshCw size={12} className="mr-1.5" /> Try Again
+                    </Button>
+                    <Button
+                      onClick={() => setToolAuthRequired(null)}
+                      variant="ghost"
+                      className="rounded-none text-xs tracking-wider uppercase text-amber-600"
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              )}
               {errorMsg && (
                 <div className="flex items-center gap-3 border border-destructive/30 bg-destructive/5 p-4">
                   <FiAlertCircle className="text-destructive shrink-0" size={16} />

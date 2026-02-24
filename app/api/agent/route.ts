@@ -206,9 +206,22 @@ async function submitTask(body: any) {
   if (!submitRes.ok) {
     const submitText = await submitRes.text()
     let errorMsg = `Task submit failed with status ${submitRes.status}`
+    let detail: any = null
     try {
       const errorData = JSON.parse(submitText)
-      errorMsg = errorData?.detail || errorData?.error || errorData?.message || errorMsg
+      detail = errorData?.detail
+      if (typeof detail === 'object' && detail?.type === 'tool_auth') {
+        // Tool authentication required — pass through as 401 with structured detail
+        return NextResponse.json(
+          {
+            success: false,
+            detail,
+            error: detail?.message || 'Tool authentication required',
+          },
+          { status: 401 }
+        )
+      }
+      errorMsg = (typeof detail === 'string' ? detail : null) || errorData?.error || errorData?.message || errorMsg
     } catch {
       try {
         const errorData = parseLLMJson(submitText)
