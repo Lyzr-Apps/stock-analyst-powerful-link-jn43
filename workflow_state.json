@@ -1,0 +1,30 @@
+{
+  "manager_agent": {
+    "id": "699da8a84d9b8b973a73e428",
+    "name": "Market Analysis Coordinator"
+  },
+  "sub_agents": [
+    {
+      "id": "699da87825bfd8a7382bdffe",
+      "name": "Portfolio Analyst Agent"
+    },
+    {
+      "id": "699da87925bfd8a7382be000",
+      "name": "SP500 Analyst Agent"
+    },
+    {
+      "id": "699da8796ad1bfc5c6936b62",
+      "name": "Tech Sector Analyst Agent"
+    },
+    {
+      "id": "699da8795be1bc2aafdf5dfc",
+      "name": "Sector Analyst Agent"
+    }
+  ],
+  "schedule": {
+    "id": "699da8ae399dfadeac390fb8",
+    "cron": "0 7 * * *",
+    "timezone": "America/New_York",
+    "is_active": false
+  }
+}

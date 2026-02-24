@@ -1,0 +1,62 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "type": "Input",
+      "label": "Scheduled / Manual Trigger",
+      "nodeCategory": "input"
+    },
+    {
+      "id": "manager_agent",
+      "type": "Agent",
+      "label": "Market Analysis Coordinator",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "portfolio_agent",
+      "type": "Agent",
+      "label": "Portfolio Analyst Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "sp500_agent",
+      "type": "Agent",
+      "label": "S&P 500 Analyst Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "tech_agent",
+      "type": "Agent",
+      "label": "Tech Sector Analyst Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "sector_agent",
+      "type": "Agent",
+      "label": "Sector Analyst Agent",
+      "nodeCategory": "agent"
+    }
+  ],
+  "edges": [
+    {
+      "source": "input_node",
+      "target": "manager_agent"
+    },
+    {
+      "source": "manager_agent",
+      "target": "portfolio_agent"
+    },
+    {
+      "source": "manager_agent",
+      "target": "sp500_agent"
+    },
+    {
+      "source": "manager_agent",
+      "target": "tech_agent"
+    },
+    {
+      "source": "manager_agent",
+      "target": "sector_agent"
+    }
+  ]
+}

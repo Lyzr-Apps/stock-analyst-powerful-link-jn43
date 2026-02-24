@@ -1,0 +1,70 @@
+{
+  "agent_name": "Market Analysis Coordinator",
+  "agent_id": "699da8a84d9b8b973a73e428",
+  "description": "Coordinates all sub-agents, aggregates their individual analyses into one comprehensive daily report with metrics and recommendations, then sends the final report via Gmail",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "report_title": "string",
+    "report_date": "string",
+    "executive_summary": "string",
+    "market_sentiment": "string",
+    "top_insights": [
+      {
+        "insight": "string",
+        "priority": "string"
+      }
+    ],
+    "portfolio_summary": "string",
+    "portfolio_change_percent": "string",
+    "sp500_summary": "string",
+    "sp500_level": "string",
+    "sp500_change": "string",
+    "tech_summary": "string",
+    "top_tech_mover": "string",
+    "sector_summary": "string",
+    "best_sector": "string",
+    "worst_sector": "string",
+    "recommendations": [
+      {
+        "action": "string",
+        "ticker": "string",
+        "reasoning": "string"
+      }
+    ],
+    "email_sent": "string",
+    "full_report": "string"
+  },
+  "example_response": {
+    "report_title": "sample string",
+    "report_date": "sample string",
+    "executive_summary": "sample string",
+    "market_sentiment": "sample string",
+    "top_insights": [
+      {
+        "insight": "sample string",
+        "priority": "sample string"
+      }
+    ],
+    "portfolio_summary": "sample string",
+    "portfolio_change_percent": "sample string",
+    "sp500_summary": "sample string",
+    "sp500_level": "sample string",
+    "sp500_change": "sample string",
+    "tech_summary": "sample string",
+    "top_tech_mover": "sample string",
+    "sector_summary": "sample string",
+    "best_sector": "sample string",
+    "worst_sector": "sample string",
+    "recommendations": [
+      {
+        "action": "sample string",
+        "ticker": "sample string",
+        "reasoning": "sample string"
+      }
+    ],
+    "email_sent": "sample string",
+    "full_report": "sample string"
+  }
+}
