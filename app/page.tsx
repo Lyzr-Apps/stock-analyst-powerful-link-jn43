@@ -435,6 +435,10 @@ export default function Page() {
         setDeliveryEmail(savedEmail)
         setEmailSaved(true)
       }
+      const savedScheduleId = localStorage.getItem('stockpulse_schedule_id')
+      if (savedScheduleId) {
+        setScheduleId(savedScheduleId)
+      }
     } catch {
       // localStorage unavailable
     }
@@ -461,20 +465,49 @@ export default function Page() {
     setScheduleLoading(true)
     setScheduleError('')
     try {
-      const result = await getSchedule(scheduleId)
-      if (result.success && result.schedule) {
-        setSchedule(result.schedule)
-      } else {
-        const listResult = await listSchedules()
-        if (listResult.success && listResult.schedules.length > 0) {
-          const found = listResult.schedules[0]
-          setSchedule(found)
-          setScheduleId(found.id)
+      let activeScheduleId = scheduleId
+      let scheduleFound = false
+
+      // Try to get the specific schedule first
+      try {
+        const result = await getSchedule(scheduleId)
+        if (result.success && result.schedule) {
+          setSchedule(result.schedule)
+          scheduleFound = true
+        }
+      } catch {
+        // Schedule not found by ID, will try listing
+      }
+
+      // Fallback: list all schedules and find the one for our agent
+      if (!scheduleFound) {
+        try {
+          const listResult = await listSchedules()
+          if (listResult.success && Array.isArray(listResult.schedules) && listResult.schedules.length > 0) {
+            // Find schedule for our manager agent, or use the first one
+            const found = listResult.schedules.find(s => s.agent_id === MANAGER_AGENT_ID) ?? listResult.schedules[0]
+            if (found) {
+              setSchedule(found)
+              activeScheduleId = found.id
+              setScheduleId(found.id)
+              try {
+                localStorage.setItem('stockpulse_schedule_id', found.id)
+              } catch {}
+            }
+          }
+        } catch {
+          // Schedules API unavailable, not critical
         }
       }
-      const logsResult = await getScheduleLogs(scheduleId, { limit: 10 })
-      if (logsResult.success) {
-        setScheduleLogs(Array.isArray(logsResult.executions) ? logsResult.executions : [])
+
+      // Load execution logs
+      try {
+        const logsResult = await getScheduleLogs(activeScheduleId, { limit: 10 })
+        if (logsResult.success) {
+          setScheduleLogs(Array.isArray(logsResult.executions) ? logsResult.executions : [])
+        }
+      } catch {
+        // Logs not available, not critical
       }
     } catch {
       setScheduleError('Failed to load schedule data')
@@ -504,9 +537,17 @@ export default function Page() {
 
     try {
       const result = await callAIAgent(message, MANAGER_AGENT_ID)
-      if (result.success) {
+      if (result && result.success) {
         const rawResult = result?.response?.result || {}
-        const parsed: ParsedReport = typeof rawResult === 'string' ? parseLLMJson(rawResult) : rawResult
+        let parsed: ParsedReport
+        try {
+          parsed = typeof rawResult === 'string' ? parseLLMJson(rawResult) : rawResult
+          if (!parsed || typeof parsed !== 'object') {
+            parsed = {}
+          }
+        } catch {
+          parsed = rawResult as ParsedReport
+        }
 
         setCurrentReport(parsed)
         setSuccessMsg('Report generated successfully')
@@ -524,10 +565,11 @@ export default function Page() {
           localStorage.setItem('stockpulse_reports', JSON.stringify(updated))
         } catch {}
       } else {
-        setErrorMsg(result?.error ?? 'Failed to generate report. Please try again.')
+        const errDetail = result?.error || result?.response?.message || 'Failed to generate report. Please try again.'
+        setErrorMsg(errDetail)
       }
-    } catch {
-      setErrorMsg('Network error. Please check your connection and try again.')
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Network error. Please check your connection and try again.')
     }
 
     setLoading(false)
@@ -590,11 +632,18 @@ export default function Page() {
       const result = await updateScheduleMessage(scheduleId, newMessage)
       if (result.success && result.newScheduleId) {
         setScheduleId(result.newScheduleId)
+        try {
+          localStorage.setItem('stockpulse_schedule_id', result.newScheduleId)
+        } catch {}
         setEmailSaved(true)
         setEmailStatusMsg('Email saved and schedule updated')
-        const schedResult = await getSchedule(result.newScheduleId)
-        if (schedResult.success && schedResult.schedule) {
-          setSchedule(schedResult.schedule)
+        try {
+          const schedResult = await getSchedule(result.newScheduleId)
+          if (schedResult.success && schedResult.schedule) {
+            setSchedule(schedResult.schedule)
+          }
+        } catch {
+          // Non-critical, schedule will be loaded on next refresh
         }
       } else {
         setEmailSaved(true)
